@@ -1,0 +1,225 @@
+﻿@model List<_123PayApp.Models.ExistingModels.VwTransactionList>
+
+@{
+    ViewData["Title"] = "Transaction";
+}
+
+<head>
+    <style>
+        .table {
+            height: 100%;
+        }
+
+        .btn-sm {
+            margin: 5px;
+        }
+    </style>
+</head>
+
+<form name="frmIndex">
+    <div class="container-fluid">
+        <input type="file" name="attachment" id="attachment" accept="image/jpeg,image/jpg,image/png" value="" hidden />
+        <table class="table">
+            <thead class="thead-dark">
+                <tr>
+                    <th scope="col">Reference No</th>
+                    <th scope="col">Account No</th>
+                    <th scope="col">Account Name</th>
+                    <th scope="col">Amount</th>
+                    <th scope="col">Mobile No</th>
+                    <th scope="col">Remarks</th>
+                    <th scope="col">Merchant</th>
+                    <th scope="col">Date</th>
+                    <th scope="col">Status</th>
+                    <th scope="col">Action</th>
+                </tr>
+            </thead>
+            <tbody>
+                @if (Model != null)
+                {
+                    foreach (var item in Model)
+                    {
+                        <tr>
+                            <td>
+                                @Html.DisplayFor(a => item.ReferenceNo)
+                            </td>
+                            <td>
+                                @Html.DisplayFor(a => item.AccountNo)
+                            </td>
+                            <td>
+                                @Html.DisplayFor(a => item.AccountName)
+                            </td>
+                            <td>
+                                @Html.DisplayFor(a => item.Amount)
+                            </td>
+                            <td>
+                                @Html.DisplayFor(a => item.MobileNumber)
+                            </td>
+                            <td>
+                                @Html.DisplayFor(a => item.Remarks)
+                            </td>
+                            <td>
+                                @Html.DisplayFor(a => item.Name)
+                            </td>
+                            <td>
+                                @Html.DisplayFor(a => item.TransactionDate)
+                            </td>
+                            <td>
+                                @Html.DisplayFor(a => item.Status)
+                            </td>
+                            <td>
+                                @if (item.Status == "Pending")
+                                {
+                                    <a href="/home/process?refNo=@item.ReferenceNo" class="btn btn-sm btn-dark">Process</a>
+                                }
+                                else if (item.Status == "Processing")
+                                {
+                                    <button type="button" class="btn-done btn btn-sm" style="background-color: #17A05D" onclick="tagDone('@item.ReferenceNo')">
+                                        Done
+                                    </button>
+                                    <button type="button" class="btn-fail btn btn-sm btn-danger" onclick="tagFailed('@item.ReferenceNo')">Failed</button>
+                                }
+                                else if (item.Status == "Done" || item.Status == "Failed")
+                                {
+                                    if (item.Attachments != null)
+                                    {
+                                        <button type="button" class="btn btn-light"><span class="fa fa-paperclip" onclick="viewAttachment('@item.ReferenceNo')"></span></button>
+                                    }
+                                }
+                            </td>
+                        </tr>
+                    }
+                }
+            </tbody>
+        </table>
+        <nav aria-label="...">
+            <ul class="pagination">
+                <li class="page-item">
+                    <a class="page-link bg-dark text-white" href="home/index?page=previous" tabindex="-1" @(Convert.ToInt32(ViewData["pageNum"]) == 1 ? "disabled" : "")>
+                        Previous
+                    </a>
+                </li>
+                <li class="page-item">
+                    <a class="page-link bg-dark text-white" href="home/index?page=next">Next</a>
+                </li>
+            </ul>
+        </nav>
+    </div>
+</form>
+
+<script src="~/lib/jquery/dist/jquery.min.js"></script>
+<script src="~/lib/bootstrap-sweetalert/sweetalert.min.js"></script>
+<script type="text/javascript">
+
+    var refNo = '';
+    var status = '';
+
+    $(document).ready(function () {
+        $('#attachment').change(function () {
+
+            var url = '';
+
+            var attachment = $('#attachment').get(0).files;
+
+            var form = $('form')[0];
+            var formData = new FormData(form);
+
+            formData.append('attachment', attachment);
+
+            if (status == 'done') {
+                url = 'home/done?refNo=' + refNo;
+            }
+            else {
+                url = 'home/fail?refNo=' + refNo;
+            }
+
+            $.ajax({
+                url: url,
+                type: 'POST',
+                data: formData,
+                contentType: false,
+                processData: false,
+                beforeSend: function (xhr) {
+                    xhr.setRequestHeader('Accept', 'application/json');
+                },
+                success: function (response) {
+
+                    swal({
+                        title: 'Success!',
+                        type: 'success',
+                        text: 'Transaction Successful!'
+                    });
+                },
+                error: function (error) {
+                    console.log(error.catch());
+                }
+            });
+        });
+    });
+
+    function tagDone(refNum) {
+        swal({
+            title: 'Receipt',
+            text: 'Please attach receipt.',
+            confirmButtonText: 'Browse files',
+            html: true
+        }, function (isConfirm) {
+            if (isConfirm) {
+                $('#attachment').trigger('click');
+                refNo = refNum;
+                status = 'done';
+            }
+        });
+    };
+
+    function tagFailed(refNum) {
+        swal({
+            title: 'Receipt',
+            text: 'Please attach failed proof.' +
+                '<br/>' + '<br/>',
+            showCancelButton: true,
+            showConfirmButton: true,
+            confirmButtonText: "Browse Files",
+            cancelButtonText: "Proceed w/o attachment",
+            cancelButtonClass: "btn-danger",
+            html: true,
+        }, function (isConfirm) {
+            if (isConfirm) {
+                $('#attachment').trigger('click');
+                refNo = refNum;
+                status = '';
+            }
+            else {
+                status = '';
+            }
+        });
+    };
+
+    function test() {
+        console.log('tologo');
+    }
+
+    function viewAttachment(refNum) {
+
+        $.ajax({
+            url: 'home/attachment?refNo=' + refNum,
+            type: 'GET',
+            contentType: 'application/json',
+            beforeSend: function (xhr) {
+                xhr.setRequestHeader('Accept', 'application/json');
+            },
+            success: function (response) {
+                var source = 'data:image/jpeg;base64,' + response;
+
+                fetch(source)
+                    .then(res => res.blob())
+                    .then(blob => {
+                        window.open(URL.createObjectURL(blob), '_blank').focus()
+                    });
+            },
+            error: function (error) {
+                console.log(error.catch());
+            }
+        });
+    };
+</script>
